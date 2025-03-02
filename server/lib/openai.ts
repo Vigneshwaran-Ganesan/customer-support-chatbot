@@ -1,6 +1,7 @@
 import OpenAI from "openai";
+import { documentStore } from "./documentStore";
 
-const openai = new OpenAI({ 
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
@@ -16,19 +17,23 @@ Always structure your response as a JSON object with the following format:
   }
 }`;
 
-// Fallback response for when API is rate limited
-const getFallbackResponse = (question: string) => ({
-  answer: "I apologize, but I'm temporarily unable to process your request due to high demand. Please try again in a few moments. In the meantime, you can check the official documentation:\n\n" +
-    "- Segment: https://segment.com/docs/\n" +
-    "- mParticle: https://docs.mparticle.com/\n" +
-    "- Lytics: https://docs.lytics.com/\n" +
-    "- Zeotap: https://docs.zeotap.com/",
-  metadata: {
-    platform: "multiple",
-    confidence: 0.5,
-    category: "general"
-  }
-});
+// Fallback response when API is rate limited
+const getFallbackResponse = (question: string) => {
+  const relevantDocs = documentStore.findRelevantContent(question);
+
+  return {
+    answer: `Based on our documentation:\n\n${relevantDocs.content}\n\nFor more details, check the official documentation:\n` +
+      "- Segment: https://segment.com/docs/\n" +
+      "- mParticle: https://docs.mparticle.com/\n" +
+      "- Lytics: https://docs.lytics.com/\n" +
+      "- Zeotap: https://docs.zeotap.com/",
+    metadata: {
+      platform: relevantDocs.platform,
+      confidence: relevantDocs.confidence,
+      category: "how-to"
+    }
+  };
+};
 
 // Exponential backoff retry logic
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -57,7 +62,7 @@ async function retryWithBackoff<T>(
 export async function generateAnswer(question: string): Promise<{
   answer: string;
   metadata: {
-    platform: string;
+    platform?: string;
     confidence: number;
     category: string;
   };
