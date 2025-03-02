@@ -7,6 +7,7 @@ const openai = new OpenAI({
 
 const SYSTEM_PROMPT = `You are a helpful CDP support assistant that helps users with questions about Segment, mParticle, Lytics, and Zeotap. 
 Answer questions accurately and concisely. If a question is not related to these CDPs, politely explain that you can only help with CDP-related questions.
+For comparison questions, highlight key differences and similarities.
 Always structure your response as a JSON object with the following format:
 {
   "answer": "Your detailed answer here",
@@ -19,6 +20,29 @@ Always structure your response as a JSON object with the following format:
 
 // Fallback response when API is rate limited
 const getFallbackResponse = (question: string) => {
+  // Check if it's a comparison question
+  const comparisonKeywords = ['compare', 'difference', 'versus', 'vs', 'better'];
+  const isComparison = comparisonKeywords.some(keyword => 
+    question.toLowerCase().includes(keyword)
+  );
+
+  if (isComparison) {
+    // Extract feature to compare
+    const features = ['source', 'user', 'audience', 'tracking'];
+    const feature = features.find(f => question.toLowerCase().includes(f)) || 'source';
+    const comparison = documentStore.compareCDPs(feature);
+
+    return {
+      answer: comparison.content,
+      metadata: {
+        platform: 'multiple',
+        confidence: comparison.confidence,
+        category: 'comparison'
+      }
+    };
+  }
+
+  // Regular documentation fallback
   const relevantDocs = documentStore.findRelevantContent(question);
 
   return {

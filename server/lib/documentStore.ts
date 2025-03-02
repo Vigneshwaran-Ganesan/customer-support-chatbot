@@ -103,6 +103,101 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
     });
   }
 
+  public compareCDPs(feature: string): {
+    content: string;
+    platform: string;
+    confidence: number;
+  } {
+    const comparisonMap = {
+      'source': {
+        title: 'Data Source Setup',
+        aspects: ['Implementation', 'Configuration', 'Verification']
+      },
+      'user': {
+        title: 'User Profile Management',
+        aspects: ['Identity Resolution', 'Attribute Management', 'Profile Merging']
+      },
+      'audience': {
+        title: 'Audience Segmentation',
+        aspects: ['Segment Creation', 'Rules Engine', 'Activation']
+      },
+      'tracking': {
+        title: 'Event Tracking',
+        aspects: ['Implementation', 'Data Quality', 'Debugging']
+      }
+    };
+
+    const comparison = comparisonMap[feature];
+    if (!comparison) {
+      return {
+        content: this.getGenericResponse(),
+        platform: 'multiple',
+        confidence: 0.3
+      };
+    }
+
+    let content = `# ${comparison.title} Comparison\n\n`;
+    const platforms = ['segment', 'mparticle', 'lytics', 'zeotap'];
+
+    for (const platform of platforms) {
+      const docs = this.docs.get(platform);
+      if (docs) {
+        content += `## ${platform.charAt(0).toUpperCase() + platform.slice(1)}\n`;
+        content += `${docs[feature + '_setup'] || docs[feature] || 'Documentation not available'}\n\n`;
+      }
+    }
+
+    content += "\nKey Differences:\n";
+    for (const aspect of comparison.aspects) {
+      content += `\n### ${aspect}\n`;
+      content += this.getAspectComparison(platforms, feature, aspect);
+    }
+
+    return {
+      content,
+      platform: 'multiple',
+      confidence: 0.85
+    };
+  }
+
+  private getAspectComparison(platforms: string[], feature: string, aspect: string): string {
+    return platforms
+      .map(p => `- ${p.charAt(0).toUpperCase() + p.slice(1)}: ${this.getFeatureHighlight(p, feature, aspect)}`)
+      .join('\n');
+  }
+
+  private getFeatureHighlight(platform: string, feature: string, aspect: string): string {
+    const highlights = {
+      'segment': {
+        'source': {
+          'Implementation': 'Quick setup with pre-built integrations',
+          'Configuration': 'Web-based UI with minimal coding',
+          'Verification': 'Real-time debugger'
+        },
+        'user': {
+          'Identity Resolution': 'Basic identity resolution',
+          'Attribute Management': 'Flexible trait management',
+          'Profile Merging': 'Automatic profile merging'
+        }
+      },
+      'mparticle': {
+        'source': {
+          'Implementation': 'SDK-based implementation',
+          'Configuration': 'Advanced data planning',
+          'Verification': 'Data quality dashboard'
+        },
+        'user': {
+          'Identity Resolution': 'Advanced cross-device matching',
+          'Attribute Management': 'Structured data schemas',
+          'Profile Merging': 'Rule-based profile unification'
+        }
+      }
+      // Add similar highlights for other platforms
+    };
+
+    return highlights[platform]?.[feature]?.[aspect] || 'Standard functionality available';
+  }
+
   public getDocContent(platform: string, topic?: string): string | undefined {
     const platformDocs = this.docs.get(platform.toLowerCase());
     if (!platformDocs) return undefined;
@@ -111,7 +206,6 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
       return platformDocs[topic];
     }
 
-    // Return all docs for the platform concatenated
     return Object.values(platformDocs).join('\n\n');
   }
 
@@ -123,10 +217,8 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
     const q = question.toLowerCase();
     const platforms = ['segment', 'mparticle', 'lytics', 'zeotap'];
 
-    // Find mentioned platform
     let platform = platforms.find(p => q.includes(p)) || 'multiple';
 
-    // Analyze question intent
     const topics = {
       'source': ['source', 'setup', 'implement', 'configure', 'integration'],
       'user': ['user', 'profile', 'identity', 'customer'],
@@ -135,7 +227,6 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
       'campaign': ['campaign', 'activation', 'engage']
     };
 
-    // Find the most relevant topic
     let bestTopic = '';
     let maxMatches = 0;
 
@@ -147,7 +238,6 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
       }
     }
 
-    // Get platform docs
     const platformDocs = this.docs.get(platform);
     if (!platformDocs) {
       return {
@@ -157,7 +247,6 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
       };
     }
 
-    // Find best matching content
     let content = '';
     let confidence = 0.5;
 
@@ -178,7 +267,6 @@ Learn at: https://docs.zeotap.com/docs/segmentation`
       confidence = 0.8;
     }
 
-    // Fallback to first available content if no match
     if (!content) {
       content = Object.values(platformDocs)[0];
       confidence = 0.6;
