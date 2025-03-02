@@ -16,6 +16,44 @@ Always structure your response as a JSON object with the following format:
   }
 }`;
 
+// Fallback response for when API is rate limited
+const getFallbackResponse = (question: string) => ({
+  answer: "I apologize, but I'm temporarily unable to process your request due to high demand. Please try again in a few moments. In the meantime, you can check the official documentation:\n\n" +
+    "- Segment: https://segment.com/docs/\n" +
+    "- mParticle: https://docs.mparticle.com/\n" +
+    "- Lytics: https://docs.lytics.com/\n" +
+    "- Zeotap: https://docs.zeotap.com/",
+  metadata: {
+    platform: "multiple",
+    confidence: 0.5,
+    category: "general"
+  }
+});
+
+// Exponential backoff retry logic
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  retries = 3,
+  initialDelay = 1000
+): Promise<T> {
+  let lastError;
+  let delay = initialDelay;
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      if (error.status !== 429) throw error; // Only retry on rate limit errors
+      await wait(delay);
+      delay *= 2; // Exponential backoff
+    }
+  }
+  throw lastError;
+}
+
 export async function generateAnswer(question: string): Promise<{
   answer: string;
   metadata: {
@@ -25,30 +63,34 @@ export async function generateAnswer(question: string): Promise<{
   };
 }> {
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: question }
-      ],
-      response_format: { type: "json_object" }
-    });
+    const operation = async () => {
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: question }
+        ],
+        response_format: { type: "json_object" }
+      });
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error('Empty response from OpenAI');
-    }
+      const content = response.choices[0].message.content;
+      if (!content) {
+        throw new Error('Empty response from OpenAI');
+      }
 
-    const result = JSON.parse(content);
-    return result;
+      return JSON.parse(content);
+    };
+
+    // Attempt operation with retries
+    return await retryWithBackoff(operation);
   } catch (error: any) {
     console.error('OpenAI API error:', error);
-    let errorMessage = 'Failed to generate answer';
 
     if (error.status === 429) {
-      errorMessage = 'API rate limit exceeded. Please try again later.';
+      console.log('Rate limit hit, using fallback response');
+      return getFallbackResponse(question);
     }
 
-    throw new Error(errorMessage);
+    throw new Error(error.message || 'Failed to generate answer');
   }
 }
