@@ -1,8 +1,7 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || 'default-key'
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const SYSTEM_PROMPT = `You are a helpful CDP support assistant that helps users with questions about Segment, mParticle, Lytics, and Zeotap. 
@@ -27,7 +26,7 @@ export async function generateAnswer(question: string): Promise<{
 }> {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: question }
@@ -35,10 +34,21 @@ export async function generateAnswer(question: string): Promise<{
       response_format: { type: "json_object" }
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('Empty response from OpenAI');
+    }
+
+    const result = JSON.parse(content);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error('OpenAI API error:', error);
-    throw new Error('Failed to generate answer');
+    let errorMessage = 'Failed to generate answer';
+
+    if (error.status === 429) {
+      errorMessage = 'API rate limit exceeded. Please try again later.';
+    }
+
+    throw new Error(errorMessage);
   }
 }
