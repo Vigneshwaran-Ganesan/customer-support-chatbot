@@ -1,13 +1,29 @@
 import OpenAI from "openai";
 import { documentStore } from "./documentStore";
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error(
-    "OpenAI API key not found. Please add your OPENAI_API_KEY to the .env file.\n" +
-    "1. Copy .env.example to .env\n" +
-    "2. Add your API key to the .env file\n" +
-    "3. Restart the application"
-  );
+console.log("ENV API KEY:", process.env.OPENAI_API_KEY ? "Found" : "Not found");
+
+// Process environment variables more reliably
+try {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error(
+      "OpenAI API key not found. Please add your OPENAI_API_KEY to the .env file.\n" +
+      "1. Copy .env.example to .env\n" +
+      "2. Add your API key to the .env file\n" +
+      "3. Restart the application"
+    );
+  }
+  
+  // Check if it's a placeholder value
+  if (process.env.OPENAI_API_KEY === "your_openai_api_key_here" || 
+      process.env.OPENAI_API_KEY.includes("XXX")) {
+    throw new Error(
+      "You are using a placeholder API key. Please replace it with your actual OpenAI API key in the .env file."
+    );
+  }
+} catch (error) {
+  console.error("API KEY ERROR:", error.message);
+  throw error;
 }
 
 const openai = new OpenAI({
@@ -124,11 +140,20 @@ export async function generateAnswer(question: string): Promise<{
   } catch (error: any) {
     console.error('OpenAI API error:', error);
 
-    if (error.status === 429) {
-      console.log('Rate limit hit, using fallback response');
+    // Use fallback for any API errors when running locally
+    if (error.status === 429 || error.code === 'ENOTFOUND' || error.message.includes('API key')) {
+      console.log('API issue, using fallback response');
       return getFallbackResponse(question);
     }
 
-    throw new Error(error.message || 'Failed to generate answer');
+    // Provide a more detailed error response
+    return {
+      answer: "I'm having trouble connecting to my knowledge base. Please check your API key configuration or try again later.",
+      metadata: {
+        platform: "none",
+        confidence: 0.1,
+        category: "error" 
+      }
+    };
   }
 }
