@@ -1,6 +1,15 @@
 import OpenAI from "openai";
 import { documentStore } from "./documentStore";
 
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error(
+    "OpenAI API key not found. Please add your OPENAI_API_KEY to the .env file.\n" +
+    "1. Copy .env.example to .env\n" +
+    "2. Add your API key to the .env file\n" +
+    "3. Restart the application"
+  );
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
