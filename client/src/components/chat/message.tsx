@@ -1,7 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SiSegment } from "react-icons/si";
-import { Brain, Database, Activity, Box, AlertCircle } from "lucide-react";
+import { Brain, Network, Box, Database, Activity, AlertCircle } from "lucide-react";
 import type { Message as MessageType } from "@shared/schema";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -12,7 +11,7 @@ interface MessageProps {
 const PlatformIcon = ({ platform }: { platform?: string }) => {
   switch (platform?.toLowerCase()) {
     case 'segment':
-      return <SiSegment className="h-4 w-4" />;
+      return <Network className="h-4 w-4" />;
     case 'mparticle':
       return <Box className="h-4 w-4" />;
     case 'lytics':

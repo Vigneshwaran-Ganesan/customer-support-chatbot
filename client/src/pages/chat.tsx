@@ -4,12 +4,11 @@ import MessageList from "@/components/chat/message-list";
 import MessageInput from "@/components/chat/message-input";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { SiSegment } from "react-icons/si";
-import { Brain, Database, Activity, Box } from "lucide-react";
+import { Brain, Network, Box, Database, Activity } from "lucide-react";
 
 const platforms = [
   { id: 'all', name: 'All Platforms', icon: Brain },
-  { id: 'segment', name: 'Segment', icon: SiSegment },
+  { id: 'segment', name: 'Segment', icon: Network },
   { id: 'mparticle', name: 'mParticle', icon: Box },
   { id: 'lytics', name: 'Lytics', icon: Database },
   { id: 'zeotap', name: 'Zeotap', icon: Activity }
